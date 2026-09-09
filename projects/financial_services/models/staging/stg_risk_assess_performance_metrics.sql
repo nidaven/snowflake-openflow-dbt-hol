@@ -1,8 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- stg_risk_assess_performance_metrics
 --
--- Pre-aggregated performance fact, one row per customer, institution and
--- product type. 2,948 rows, the same grain as the risk profiles.
+-- Pre-aggregated performance fact, one row per source performance record.
+-- 700 rows, the same row count as the risk profiles.
 --
 -- Note what this table is: numbers somebody else already aggregated. It is
 -- convenient and it is also a trap, because nothing in it can be recomputed

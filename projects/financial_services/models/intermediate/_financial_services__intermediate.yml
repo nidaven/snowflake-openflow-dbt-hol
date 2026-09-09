@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: int_fs_institution_risk_summary
+    description: >
+      Credit-risk portfolio summary at one row per institution, including
+      exposure, risk-weighted exposure, average baseline risk and collateral
+      assessment coverage.
+    columns:
+      - name: institution_id
+        description: Primary key and foreign key to the institution staging model.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_risk_assess_financial_institutions')
+                field: institution_id
+
+      - name: total_exposure
+        description: Total exposure across the institution's risk relationships.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+
+      - name: total_risk_weighted_exposure
+        description: Total exposure weighted by each relationship's baseline risk score.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+
+      - name: average_base_risk_score
+        description: Average baseline risk score across relationships, from 0 to 1.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true
+
+      - name: relationship_count
+        description: Number of risk relationships held by the institution.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+
+      - name: unassessed_collateral_rate
+        description: Share of relationships without a collateral assessment, from 0 to 1.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+                inclusive: true

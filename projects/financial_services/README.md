@@ -28,9 +28,10 @@ scoring this.
 
 1. Open this folder (`projects/financial_services`) in dbt Studio.
 2. `dbt deps`
-3. `dbt seed`, which loads all eight raw tables — the feeds a real deployment
+3. `dbt seed`, which loads all eight raw tables — the tables a real deployment
    would land continuously via Openflow instead.
-4. `dbt build --select staging`, which is checkpoint 1 and should be green.
+4. `dbt build --select staging --indirect-selection cautious`, which is
+   checkpoint 1 and should be green.
 5. `dbt build`, which is where the seeded bugs live. Fix them with dbt Wizard.
 6. Optional: `dbt build --select tag:stretch` for the marketing and product
    recommendation marts.
@@ -87,12 +88,12 @@ cheerfully describe whatever columns it is given.
 
 ## Three ways this data will bite you
 
-**Empty strings that are not nulls.** `risk_change_from_previous` is text and is
-`''` on the first assessment of every relationship, 700 rows.
-`collateral_quality_score`, `liquidity_ratio` and `projected_cash_flow_rating`
-are text and empty on roughly two thirds of rows each. `cast()` throws
-`Numeric value '' is not recognized`. `try_cast()` returns NULL and keeps going.
-Which one you want depends on whether a blank is a bug or a fact.
+**Text fields need explicit handling.** The first assessment for each of the 700
+risk profiles has a blank `risk_change_from_previous`; `dbt seed` loads those
+blank CSV fields as NULL. `collateral_quality_score`, `liquidity_ratio` and
+`projected_cash_flow_rating` are also stored as text even though the current
+values are numeric. `try_cast()` keeps future blanks or malformed values from
+taking down the model and returns NULL for downstream handling.
 
 **Percentages stored as strings.** `int_rate` is `'7.90%'`, `revol_util` is
 `'28.30%'`, `pub_rec_bankruptcies` uses `'NA'`, and `issue_d` is `'Dec-11'`.

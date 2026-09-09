@@ -85,7 +85,7 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: ['Very Low', 'Low', 'Moderate', 'High']
+                values: ['Very Low', 'Low', 'Moderate', 'High', 'Very High']
 
         dimension:
           type: categorical
@@ -308,6 +308,7 @@ models:
             combination_of_columns:
               - customer_id
               - institution_id
+              - product_type
     semantic_model:
       enabled: true
       name: fs_risk_relationship_summary
@@ -420,10 +421,11 @@ models:
 
       - name: assessment_id
         data_type: number(38,0)
-        description: Surrogate key from the source.
+        description: Primary key from the source.
         constraints:
           - type: not_null
         data_tests:
+          - unique
           - not_null
 
         entity:
@@ -635,13 +637,6 @@ models:
           True when risk worsened by 0.10 or more that month. Null on first
           assessments, because "worse than what?" has no answer there.
 
-    data_tests:
-      - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns:
-              - customer_id
-              - institution_id
-              - assessment_date
     semantic_model:
       enabled: true
       name: fs_monthly_risk_assessment
@@ -800,11 +795,6 @@ models:
       - name: funded_amount_band
         data_type: varchar
         description: Under 5K, 5K to 15K, 15K to 25K, or Over 25K.
-
-      # HOL_BUG_FS_02
-      - name: emp_title
-        data_type: varchar
-        description: Employer name.
 
       - name: state_code
         data_type: varchar

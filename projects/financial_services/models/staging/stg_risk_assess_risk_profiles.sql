@@ -1,18 +1,13 @@
 -- ---------------------------------------------------------------------------
 -- stg_risk_assess_risk_profiles
 --
--- The relationship fact: one row per customer and institution pair. 2,948 rows.
+-- The relationship fact: one row per source risk profile. 700 rows.
 --
 -- Three columns here look numeric and are not: collateral_quality_score,
--- liquidity_ratio and projected_cash_flow_rating are all `text` in the source,
--- with an empty string where the value is unknown. About two thirds of rows are
--- empty on each.
---
--- try_cast is the right tool. cast() throws "Numeric value '' is not
--- recognized" and takes the whole model down. try_cast returns NULL for the
--- rows it cannot convert and keeps going, which is what "unknown" should mean.
--- Use cast() when a failure to convert is a bug you want to hear about, and
--- try_cast when the source is genuinely allowed to be blank.
+-- liquidity_ratio and projected_cash_flow_rating are text in the source. The
+-- current seed values are populated and parseable, but try_cast keeps future
+-- blanks or malformed values from taking the whole model down. Unparseable
+-- values become NULL so downstream models can handle "unknown" explicitly.
 -- ---------------------------------------------------------------------------
 
 {{ config(materialized='view') }}

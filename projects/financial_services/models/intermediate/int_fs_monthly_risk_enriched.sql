@@ -34,14 +34,15 @@ converted as (
     select
         assessments.*,
 
-        -- HOL_BUG_FS_01
-        cast(assessments.risk_change_from_previous_raw as number(9, 4)) as risk_change_from_previous,
+        -- HOL_BUG_FS_01: blanks and seeded NULLs both mean no prior assessment.
+        try_cast(assessments.risk_change_from_previous_raw as number(9, 4)) as risk_change_from_previous,
 
         -- Whether this is the first assessment of the relationship. Useful in
         -- its own right, and it makes the NULL above explainable to anyone
         -- reading a report.
         case
-            when trim(assessments.risk_change_from_previous_raw) = '' then true
+            when assessments.risk_change_from_previous_raw is null
+                or trim(assessments.risk_change_from_previous_raw) = '' then true
             else false
         end as is_first_assessment
 
@@ -119,8 +120,7 @@ enriched as (
     from converted
 
     inner join relationships
-        on converted.customer_id = relationships.customer_id
-        and converted.institution_id = relationships.institution_id
+        on converted.risk_profile_id = relationships.risk_profile_id
 
 )
 
