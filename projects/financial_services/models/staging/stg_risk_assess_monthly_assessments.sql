@@ -1,15 +1,13 @@
 -- ---------------------------------------------------------------------------
 -- stg_risk_assess_monthly_assessments
 --
--- The time-series fact: one row per customer, institution and month. 106,128
--- rows covering 2022-01-01 to 2024-11-16.
+-- The time-series fact: one row per source assessment. 25,200 rows covering
+-- 2022-01-01 to 2024-12-01.
 --
--- `risk_change_from_previous` is left as VARCHAR here on purpose. It is text in
--- the source and it is an empty string on the first assessment of every
--- relationship, which is exactly 2,948 rows. Converting it is a business
--- decision (does "no previous month" mean zero change, or unknown change?), so
--- it happens in the intermediate layer where business decisions belong, not
--- here.
+-- `risk_change_from_previous` is left as VARCHAR here on purpose. The first
+-- assessment of each source risk profile has no previous value, producing 700
+-- NULLs after seeding. Converting or defaulting it is a business decision, so it
+-- happens in the intermediate layer rather than staging.
 -- ---------------------------------------------------------------------------
 
 {{ config(materialized='view') }}
@@ -26,6 +24,12 @@ renamed as (
 
         -- ---- keys ---------------------------------------------------------
         cast(assessment_id as number(38, 0)) as assessment_id,
+
+        -- The workshop seed contains 36 ordered monthly assessments per risk
+        -- profile but omits the relationship key. Recover it from that stable
+        -- sequence so downstream joins do not multiply multi-product pairs.
+        cast(ceil(cast(assessment_id as number(38, 0)) / 36) as number(38, 0)) as risk_profile_id,
+
         cast(customer_id as varchar) as customer_id,
         cast(institution_id as varchar) as institution_id,
 

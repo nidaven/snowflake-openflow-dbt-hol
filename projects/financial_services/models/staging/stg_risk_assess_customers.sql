@@ -1,7 +1,7 @@
 -- ---------------------------------------------------------------------------
 -- stg_risk_assess_customers
 --
--- Customer dimension for the credit risk star. 1,000 rows.
+-- Customer dimension for the credit risk star. 250 rows.
 --
 -- GOVERNANCE NOTE
 -- The source has a `customer_name` column. It does not appear below.

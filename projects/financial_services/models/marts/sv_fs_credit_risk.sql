@@ -73,7 +73,7 @@ FACTS (
         COMMENT = 'One when risk worsened by 0.10 or more that month, otherwise zero.',
 
     -- ---- relationship facts --------------------------------------------------
-    relationships.relationship_exposure AS relationships.total_exposure
+    relationships.exposure_amount AS relationships.total_exposure
         COMMENT = 'Total exposure on the relationship in USD.',
 
     relationships.relationship_risk_weighted_exposure AS relationships.risk_weighted_exposure
@@ -240,11 +240,11 @@ METRICS (
         COMMENT = 'Number of monthly assessments.',
 
     -- ---- relationship metrics --------------------------------------------------
-    relationships.total_exposure AS SUM(relationships.relationship_exposure)
+    relationships.total_relationship_exposure AS SUM(relationships.exposure_amount)
         WITH SYNONYMS = ('total exposure', 'exposure', 'how much at stake')
         COMMENT = 'Total exposure across relationships in USD.',
 
-    relationships.average_exposure AS AVG(relationships.relationship_exposure)
+    relationships.average_exposure AS AVG(relationships.exposure_amount)
         WITH SYNONYMS = ('average exposure', 'typical exposure', 'average ticket')
         COMMENT = 'Average exposure per relationship in USD.',
 

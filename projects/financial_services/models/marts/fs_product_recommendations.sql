@@ -25,9 +25,6 @@ select
     cast(customer_id as varchar) as customer_id,
     cast(product_id as varchar) as product_id,
 
-    -- HOL_BUG_FS_04
-    cast(customer_email as varchar) as customer_email,
-
     -- ---- time ---------------------------------------------------------------
     cast(recommended_at as date) as recommended_at,
     cast(sold_at as date) as sold_at,

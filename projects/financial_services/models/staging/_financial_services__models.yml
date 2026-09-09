@@ -8,7 +8,7 @@ models:
 
   - name: stg_risk_assess_customers
     description: >
-      Customer dimension for the credit risk star. 1,000 rows.
+      Customer dimension for the credit risk star. 250 rows.
       `customer_name` is excluded and exposed only as an md5 hash. See the
       governance note at the top of the model file.
     columns:
@@ -132,11 +132,10 @@ models:
           - accepted_values:
               arguments:
                 values:
-                  - 'Commercial Bank'
-                  - 'Investment Bank'
+                  - 'Bank'
                   - 'Credit Union'
-                  - 'Asset Manager'
                   - 'Insurance Company'
+                  - 'Investment Firm'
 
       - name: institution_size
         description: Small, Medium, Large or Global.
@@ -147,12 +146,18 @@ models:
                 values: ['Small', 'Medium', 'Large', 'Global']
 
       - name: region
-        description: Six regions, including International.
+        description: Geographic operating region.
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'West', 'International']
+                values:
+                  - 'Asia Pacific'
+                  - 'Europe'
+                  - 'International'
+                  - 'Latin America'
+                  - 'Middle East & Africa'
+                  - 'North America'
 
       - name: risk_appetite_score
         description: >
@@ -192,13 +197,14 @@ models:
   # ===========================================================================
   - name: stg_risk_assess_risk_profiles
     description: >
-      The relationship fact: one row per customer and institution pair. 2,948
-      rows. Three text-typed numerics are converted with try_cast; see the note
-      at the top of the model file.
+      The relationship fact: one row per source risk profile, 700 rows. The
+      source surrogate key is the grain; a customer and institution pair can
+      appear more than once across products. Three text-typed numerics are
+      converted defensively with try_cast.
     columns:
 
       - name: risk_profile_id
-        description: Surrogate key from the source.
+        description: Primary key from the source.
         data_tests:
           - unique
           - not_null
@@ -228,12 +234,11 @@ models:
           - accepted_values:
               arguments:
                 values:
-                  - 'Personal Loan'
                   - 'Business Loan'
-                  - 'Mortgage'
                   - 'Credit Card'
-                  - 'Investment Portfolio'
-                  - 'Insurance Policy'
+                  - 'Line of Credit'
+                  - 'Mortgage'
+                  - 'Personal Loan'
 
       - name: risk_pattern
         description: How risk has behaved on this relationship over time.
@@ -242,12 +247,10 @@ models:
           - accepted_values:
               arguments:
                 values:
-                  - 'Steady-Low'
-                  - 'Steady-Moderate'
+                  - 'Deteriorating'
                   - 'Improving'
-                  - 'Cyclical'
-                  - 'Volatile-Improving'
-                  - 'Volatile-Deteriorating'
+                  - 'Stable'
+                  - 'Volatile'
 
       - name: base_risk_score
         description: Baseline risk score. Real range 0.05 to 0.95.
@@ -280,19 +283,21 @@ models:
 
       - name: collateral_quality_score
         description: >
-          Converted with try_cast from a text column. NULL on roughly 2,005 of
-          2,948 rows, which is the source saying "not assessed". No not_null
-          test, because that would be testing for something the source cannot
-          give us.
+          Converted defensively with try_cast from a text source column. The
+          current seed contains no unparseable values.
 
       - name: liquidity_ratio
-        description: Converted with try_cast. NULL on roughly 2,160 rows.
+        description: >
+          Converted defensively with try_cast. The current seed contains no
+          unparseable values.
 
       - name: projected_cash_flow_rating
-        description: Converted with try_cast. NULL on roughly 2,054 rows.
+        description: >
+          Converted defensively with try_cast. The current seed contains no
+          unparseable values.
 
       - name: is_collateral_unassessed
-        description: True where the source left collateral quality blank.
+        description: True when collateral quality is blank in the source.
         data_tests:
           - not_null
 
@@ -302,19 +307,33 @@ models:
             combination_of_columns:
               - customer_id
               - institution_id
+              - product_type
 
   # ===========================================================================
   - name: stg_risk_assess_monthly_assessments
     description: >
-      The time-series fact: one row per customer, institution and month.
-      106,128 rows covering 2022-01-01 to 2024-11-16.
-      `risk_change_from_previous_raw` is deliberately left as VARCHAR here.
+      The time-series fact: one row per source assessment, 25,200 rows covering
+      2022-01-01 to 2024-12-01. The source assessment ID is the grain because
+      customer and institution pairs can repeat. `risk_change_from_previous_raw`
+      is deliberately left as VARCHAR here.
     columns:
 
       - name: assessment_id
-        description: Surrogate key from the source.
+        description: Primary key from the source.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: risk_profile_id
+        description: >
+          Relationship key recovered from the workshop seed's stable sequence
+          of 36 monthly assessments per risk profile.
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_risk_assess_risk_profiles')
+                field: risk_profile_id
 
       - name: customer_id
         description: Foreign key to stg_risk_assess_customers.
@@ -355,12 +374,9 @@ models:
 
       - name: risk_change_from_previous_raw
         description: >
-          Still text. Empty string on the first assessment of each
-          relationship, which is exactly 2,948 rows. Converted in
-          int_fs_monthly_risk_enriched, where the business decision about what
-          blank means belongs.
-        data_tests:
-          - not_null
+          Still text. NULL on the first assessment of each source risk profile,
+          exactly 700 rows. Converted in int_fs_monthly_risk_enriched, where the
+          business decision about what a missing prior value means belongs.
 
       - name: fraud_probability
         description: Modelled fraud probability. Real range 0.001 to 0.9.
@@ -406,31 +422,21 @@ models:
           - accepted_values:
               arguments:
                 values:
+                  - 'Behavioral Deviation'
                   - 'None'
-                  - 'Fraud Alert'
+                  - 'Rapid Score Change'
                   - 'Unusual Transaction Pattern'
-                  - 'Sudden Risk Change'
-                  - 'Credit Report Change'
-                  - 'Market Event Impact'
-
-    data_tests:
-      - dbt_utils.unique_combination_of_columns:
-          arguments:
-            combination_of_columns:
-              - customer_id
-              - institution_id
-              - assessment_date
 
   # ===========================================================================
   - name: stg_risk_assess_performance_metrics
     description: >
       Pre-aggregated performance fact, one row per customer, institution and
-      product type. 2,948 rows. Numbers somebody else calculated, kept under
-      their source names so that stays obvious.
+      product type, 700 rows. Numbers somebody else calculated are kept under
+      their source names so that provenance stays obvious.
     columns:
 
       - name: performance_id
-        description: Surrogate key from the source.
+        description: Primary key from the source.
         data_tests:
           - unique
           - not_null
@@ -461,7 +467,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['Low Value', 'Moderate Value', 'High Value', 'Premium Value']
+                values: ['Bronze', 'Silver', 'Gold', 'Platinum']
 
       - name: risk_trend
         description: Direction of travel in risk.
@@ -469,13 +475,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values:
-                  - 'Strongly Improving'
-                  - 'Improving'
-                  - 'Stable'
-                  - 'Deteriorating'
-                  - 'Strongly Deteriorating'
-
+                values: ['Improving', 'Stable', 'Worsening']
       - name: optimization_priority
         description: Priority of the identified opportunity.
         data_tests:
